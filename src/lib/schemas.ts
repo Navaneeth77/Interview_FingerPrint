@@ -68,9 +68,9 @@ export const speechMetricsSchema = z.object({
 
 export const visualMetricsSchema = z.object({
   samples: z.number().int().min(0).max(10_000),
-  facePresentPct: z.number().min(0).max(100),
-  centeredPct: z.number().min(0).max(100),
+  cameraOnPct: z.number().min(0).max(100),
   movementIndex: z.number().min(0).max(100),
+  framingCenteredPct: z.number().min(0).max(100),
 });
 
 export const evaluateRequestSchema = z.object({

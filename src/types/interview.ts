@@ -80,13 +80,21 @@ export interface SpeechMetrics {
   longPauseCount: number;
 }
 
-/** Client-side webcam signals from the optional camera mode. */
+/**
+ * Client-side webcam signals from the optional camera mode.
+ *
+ * These are frame-difference measurements, not face or emotion recognition. They describe
+ * what the camera saw — nothing here is a claim about confidence or competence.
+ */
 export interface VisualMetrics {
+  /** How many frames were sampled while answering. */
   samples: number;
-  facePresentPct: number;
-  centeredPct: number;
-  /** 0–100 index of head/torso movement. Higher = more restless. */
+  /** Share of samples where the camera was delivering a real (non-blank) image. */
+  cameraOnPct: number;
+  /** 0–100 index of frame-to-frame movement. Higher = more restless. */
   movementIndex: number;
+  /** Share of samples where the movement sat in the centre of frame — a framing signal. */
+  framingCenteredPct: number;
 }
 
 export interface AnswerRecord {

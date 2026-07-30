@@ -3,9 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { CameraPanel } from '@/components/interview/CameraPanel';
 import { ProgressRail } from '@/components/interview/ProgressRail';
 import { QuestionCard } from '@/components/interview/QuestionCard';
 import { QuestionTimer } from '@/components/interview/QuestionTimer';
+import { VoiceAnswer } from '@/components/interview/VoiceAnswer';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ThinkingPanel } from '@/components/ThinkingPanel';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +15,7 @@ import { Callout } from '@/components/ui/Callout';
 import { ApiError, evaluateAnswer, requestReport } from '@/lib/client-api';
 import { LIMITS } from '@/lib/schemas';
 import { loadSession, useInterviewSession } from '@/lib/session-store';
-import type { AnswerRecord, Question } from '@/types/interview';
+import type { AnswerRecord, Question, SpeechMetrics, VisualMetrics } from '@/types/interview';
 
 const REPORT_STEPS = [
   'Re-reading every answer alongside the question it was given',
@@ -32,6 +34,8 @@ export default function InterviewPage() {
   const { session, status, updateSession } = useInterviewSession();
 
   const [draft, setDraft] = useState('');
+  const [speech, setSpeech] = useState<SpeechMetrics | undefined>(undefined);
+  const [visual, setVisual] = useState<VisualMetrics | undefined>(undefined);
   const [reportError, setReportError] = useState<ApiError | null>(null);
 
   /** In-flight evaluations. Answers are scored while the candidate moves on. */
@@ -106,11 +110,13 @@ export default function InterviewPage() {
       questionId: question.id,
       question: question.question,
       answer: draft.trim(),
-      mode: 'typed',
+      mode: speech ? 'voice' : 'typed',
       durationSec: Math.max(
         0,
         Math.round((Date.now() - (questionStartedRef.current || Date.now())) / 1000),
       ),
+      speech,
+      visual,
     };
 
     updateSession((current) => ({ ...current, answers: [...current.answers, record] }));
@@ -140,7 +146,9 @@ export default function InterviewPage() {
 
     pendingRef.current = [...pendingRef.current, pending];
     setDraft('');
-  }, [draft, profile, question, updateSession]);
+    setSpeech(undefined);
+    setVisual(undefined);
+  }, [draft, profile, question, speech, visual, updateSession]);
 
   if (status === 'loading' || !session || !profile) {
     return (
@@ -202,7 +210,10 @@ export default function InterviewPage() {
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-10">
         <div className="flex items-center justify-between gap-4">
           <ProgressRail total={questions.length} currentIndex={index} scored={scored} />
-          <QuestionTimer key={index} />
+          <div className="flex items-center gap-4">
+            <CameraPanel questionKey={index} onMetrics={setVisual} metrics={visual} />
+            <QuestionTimer key={index} />
+          </div>
         </div>
 
         <div className="mt-10">
@@ -210,9 +221,12 @@ export default function InterviewPage() {
         </div>
 
         <div className="mt-8">
-          <label htmlFor="answer" className="label-caps">
-            Your answer
-          </label>
+          <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
+            <label htmlFor="answer" className="label-caps">
+              Your answer
+            </label>
+            <VoiceAnswer onTranscript={setDraft} onMetrics={setSpeech} metrics={speech} />
+          </div>
           <textarea
             id="answer"
             value={draft}
@@ -224,7 +238,7 @@ export default function InterviewPage() {
               if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) submitAnswer();
             }}
             placeholder="Answer as you would out loud. Specifics — numbers, decisions, trade-offs — are what get scored."
-            className="mt-2.5 w-full resize-y rounded-xl border border-line bg-surface px-4 py-3.5 text-[0.95rem] leading-relaxed text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none"
+            className="w-full resize-y rounded-xl border border-line bg-surface px-4 py-3.5 text-[0.95rem] leading-relaxed text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none"
           />
 
           <div className="mt-2 flex items-center justify-between gap-4">

@@ -146,6 +146,12 @@ quality questions, so quality won.
 - Difficulty: warm-up, standard, senior bar
 - Five Gemma-generated questions with visible rationale and grounding
 - Typed answers, per-question timer, progress rail, live scoring indicator
+- **Optional spoken answers** — browser speech recognition drops the transcript into the
+  answer box (still editable), and measures words per minute, filler words and long pauses.
+  Those numbers are passed to Gemma as delivery context, so the feedback can call out pace
+  and fillers alongside content.
+- **Optional camera practice** — a small self-view for framing, plus a movement index from
+  frame differencing. Not face, gaze or emotion detection, and never described as one.
 - Background scoring so the candidate never waits between questions
 - Interview Fingerprint report: score, archetype, 5 dimensions, strengths, weaknesses,
   repeated patterns, ranked improvement plan, per-question breakdown, next session
@@ -182,7 +188,8 @@ src/
 │       └── interview/{generate,evaluate,report}/route.ts
 ├── components/
 │   ├── ui/                          Button, TextArea, OptionGroup, Callout, Spinner
-│   ├── interview/                   QuestionCard, ProgressRail, QuestionTimer
+│   ├── interview/                   QuestionCard, ProgressRail, QuestionTimer,
+│   │                                VoiceAnswer, CameraPanel
 │   ├── report/                      FingerprintMark, AnswerBreakdown
 │   ├── GemmaStatus.tsx              Live model connectivity badge
 │   ├── SiteHeader.tsx
@@ -195,6 +202,8 @@ src/
 │   ├── rate-limit.ts
 │   ├── client-api.ts                Browser-side wrappers for our own API
 │   ├── session-store.ts             sessionStorage as an external store
+│   ├── speech.ts                    Filler/pace/pause metrics + Web Speech typings
+│   ├── vision.ts                    Frame-difference movement sampling
 │   └── samples.ts                   Sample resume/JD inputs for demos
 └── types/interview.ts
 ```
@@ -267,6 +276,17 @@ Notes for deployment:
   steer the interview.
 - **Input hardening.** Every endpoint validates and clamps its input with Zod, strips control
   characters, and rejects payloads over 256 KB. All endpoints are rate limited.
+- **Microphone and camera are off by default, and optional.** Both are started only by an
+  explicit click, both show a live indicator while active, and both stop when you leave the
+  interview. Denying either permission changes nothing about the interview.
+- **No audio or video is recorded, uploaded or stored.** Speech recognition is performed by
+  the browser and only the resulting text reaches this app — exactly as if it had been typed.
+  Camera frames are sampled to a 32×24 canvas in the page, reduced to a movement number, and
+  discarded; no frame leaves the browser.
+- **The camera feature does not claim more than it measures.** It is frame differencing, so
+  it can say "you moved a lot" or "you drifted off-centre". It cannot see your face, your
+  gaze or your emotions, and the report prompt explicitly forbids inferring confidence or
+  competence from these numbers.
 - **Scores are opinions, not measurements.** The report is a coaching signal from one model on
   one transcript, and the UI presents it as such. It is not a hiring decision, and it is not a
   claim about the candidate as a person.
@@ -278,11 +298,8 @@ request path.
 
 ## Future roadmap
 
-- **Voice answers** — MediaRecorder + browser speech recognition, with words-per-minute,
-  filler-word and pause metrics fed into the evaluation prompt. The types
-  (`SpeechMetrics`), the request schema and the report rendering already accept this.
-- **Webcam signals** — optional, client-side only: face presence, framing, movement. Presented
-  as observable behavioural signals for coaching, never as a confidence score.
+- **Wider speech support** — the Web Speech API is Chrome-only, so spoken answers currently
+  degrade to typing elsewhere. A Whisper-style transcription step would close that gap.
 - **Adaptive follow-ups** — Gemma already writes the follow-up it would have asked; the next
   step is asking it live when an answer is thin.
 - **Session history** — compare fingerprints across sessions to show whether the repeated

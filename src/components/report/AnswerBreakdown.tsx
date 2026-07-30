@@ -48,8 +48,9 @@ export function AnswerBreakdown({ answers }: { answers: AnswerRecord[] }) {
                       ? `${answer.answer.trim().split(/\s+/).length} words · ${answer.durationSec}s`
                       : 'Skipped'}
                     {answer.speech
-                      ? ` · ${Math.round(answer.speech.wordsPerMinute)} wpm · ${answer.speech.fillerCount} fillers`
+                      ? ` · spoken · ${Math.round(answer.speech.wordsPerMinute)} wpm · ${answer.speech.fillerCount} fillers`
                       : ''}
+                    {answer.visual ? ` · movement ${answer.visual.movementIndex}/100` : ''}
                   </span>
                 </span>
 

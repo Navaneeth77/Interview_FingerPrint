@@ -142,9 +142,11 @@ export function buildReportPrompt(input: ReportRequest): string {
         : '';
 
       const visual = answer.visual
-        ? `\n  on-camera: face visible ${Math.round(answer.visual.facePresentPct)}% of samples, centred ${Math.round(
-            answer.visual.centeredPct,
-          )}%, movement index ${Math.round(answer.visual.movementIndex)}/100`
+        ? `\n  on-camera (frame-difference only, not face or emotion detection): camera showing a real image in ${Math.round(
+            answer.visual.cameraOnPct,
+          )}% of samples, movement index ${Math.round(
+            answer.visual.movementIndex,
+          )}/100, movement centred in frame ${Math.round(answer.visual.framingCenteredPct)}% of the time`
         : '';
 
       return `Q${index + 1} (${answer.mode} answer, ${Math.round(answer.durationSec)}s): ${answer.question}
@@ -179,6 +181,8 @@ Requirements:
 - "repeatedPatterns": 2-3 habits that appeared in more than one answer — this is the most valuable part of the report, so only list things you can actually see repeating.
 - "improvementAreas": the 3 highest-leverage fixes. "why" cites evidence from this interview; "action" is a drill they can do this week.
 - "nextSession": what the next mock interview should be. Set "interviewType" and "difficulty" to what would genuinely stretch them next — raise the difficulty if they cleared this bar, hold it if they did not. "drills" is 3 concrete practice tasks.
+
+If delivery or on-camera numbers appear above, you may reference them only as observable habits — pace, fillers, pauses, steadiness, framing. Never infer confidence, honesty, personality or competence from them, and never treat them as evidence about the candidate as a person. If those numbers are absent, say nothing about delivery or camera presence.
 
 Be direct and specific. No hedging, no praise sandwiches, no filler like "keep up the great work". Address the candidate as "you".
 
