@@ -4,13 +4,18 @@ import type { ComponentProps, ReactNode } from 'react';
 type Variant = 'primary' | 'secondary' | 'ghost';
 type Size = 'md' | 'lg';
 
+/*
+ * §6: on a dark canvas the primary action is a filled, glowing moss pill with near-black
+ * label; secondary drops to a transparent hairline outline. That gap is what creates
+ * single-choice architecture at the two moments that matter (hero CTA, next session).
+ */
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-accent text-white border-accent hover:bg-accent-hover disabled:bg-line-strong disabled:border-line-strong disabled:text-white/80',
+    'bg-accent text-on-accent border-accent shadow-[var(--shadow-cta)] hover:bg-accent-hover hover:border-accent-hover disabled:bg-accent/30 disabled:border-transparent disabled:text-on-accent/50 disabled:shadow-none',
   secondary:
-    'bg-surface text-ink border-line-strong hover:border-ink hover:bg-white disabled:text-muted disabled:hover:border-line-strong',
+    'bg-transparent text-ink border-line-strong hover:border-accent hover:bg-accent-wash disabled:text-muted disabled:hover:border-line-strong disabled:hover:bg-transparent',
   ghost:
-    'bg-transparent text-ink-soft border-transparent hover:text-ink hover:bg-black/[0.04] disabled:text-muted',
+    'bg-transparent text-ink-soft border-transparent hover:text-ink hover:bg-white/[0.05] disabled:text-muted',
 };
 
 const SIZES: Record<Size, string> = {

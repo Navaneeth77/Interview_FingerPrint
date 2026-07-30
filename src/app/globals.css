@@ -1,25 +1,86 @@
 @import 'tailwindcss';
 
 /*
- * Design language: printed interview notes. Warm paper, ink type, one green accent,
- * hairline rules instead of drop shadows. Deliberately light-only — the app is demoed
- * on a projector, and a single committed palette beats a half-tuned dark mode.
+ * Dark UI redesign — visual system only.
+ *
+ * Layout, section order and spacing rhythm are unchanged; this file re-skins surface,
+ * colour, border, radius, shadow and type weight. Three tonal background steps
+ * (page → card → recessed field) replace the old flat cream so hierarchy is readable
+ * at a glance on a dark canvas.
  */
-@theme {
-  --color-paper: #f6f4ef;
-  --color-surface: #fffefb;
-  --color-ink: #191712;
-  --color-ink-soft: #4b4740;
-  --color-muted: #78726a;
-  --color-line: #e3ded1;
-  --color-line-strong: #cec7b6;
 
-  --color-accent: #1f5f4b;
-  --color-accent-hover: #184c3c;
-  --color-accent-wash: #eef3f0;
+/* --- Quick reference token sheet, exactly as specified --------------------------- */
+:root {
+  --bg-base: #0f1512;
+  --bg-panel-1: #161d19;
+  --bg-panel-2: #1c2420;
+  --bg-panel-inset: #0b100d;
 
-  --color-flag: #a8501e;
-  --color-flag-wash: #f9efe8;
+  --border-hairline: 1px solid rgba(255, 255, 255, 0.06);
+  --border-emphasis: 1px solid rgba(154, 211, 173, 0.25);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-cta: 0 4px 16px rgba(94, 168, 122, 0.35);
+
+  --accent-moss: #5ea87a;
+  --accent-moss-dim: #3f7358;
+  --accent-moss-tint-bg: rgba(94, 168, 122, 0.12);
+  --accent-amber: #d9a441;
+  --accent-amber-tint-bg: rgba(217, 164, 65, 0.12);
+  --accent-red: #d9634a;
+
+  --text-primary: #eef0ec;
+  --text-secondary: #9aa39c;
+  --text-label: #6f8079;
+
+  --radius-card: 10px;
+  --radius-pill: 999px;
+}
+
+/*
+ * Companions to the sheet above. The border tokens are shorthands, so colour-only
+ * copies are needed for Tailwind's border utilities; the rest are values the spec
+ * states in prose (§5 body copy at 92%, §6 near-black label on the moss fill) rather
+ * than in the sheet. No colours outside the specified palette.
+ */
+:root {
+  --line-hairline: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(154, 211, 173, 0.25);
+  --text-body: rgba(238, 240, 236, 0.92);
+  --text-on-accent: #0c120f;
+  --accent-red-tint-bg: rgba(217, 99, 74, 0.12);
+}
+
+@theme inline {
+  --color-paper: var(--bg-base);
+  --color-surface: var(--bg-panel-1);
+  --color-panel-2: var(--bg-panel-2);
+  --color-inset: var(--bg-panel-inset);
+
+  --color-ink: var(--text-primary);
+  --color-ink-soft: var(--text-body);
+  --color-muted: var(--text-secondary);
+  --color-label: var(--text-label);
+  --color-on-accent: var(--text-on-accent);
+
+  --color-line: var(--line-hairline);
+  --color-line-strong: var(--line-strong);
+
+  --color-accent: var(--accent-moss);
+  --color-accent-hover: var(--accent-moss-dim);
+  --color-accent-dim: var(--accent-moss-dim);
+  --color-accent-wash: var(--accent-moss-tint-bg);
+
+  --color-amber: var(--accent-amber);
+  --color-amber-wash: var(--accent-amber-tint-bg);
+
+  --color-flag: var(--accent-red);
+  --color-flag-wash: var(--accent-red-tint-bg);
+
+  --radius-card: var(--radius-card);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-cta: var(--shadow-cta);
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -28,8 +89,8 @@
 
 @layer base {
   html {
-    background-color: var(--color-paper);
-    color: var(--color-ink);
+    background-color: var(--bg-base);
+    color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -37,31 +98,51 @@
     font-family: var(--font-sans);
   }
 
-  /* Focus ring that matches the palette rather than the browser default blue. */
+  /*
+   * §5: dark backgrounds optically thin out serif strokes, so the display face carries
+   * more weight here than it did on paper.
+   */
+  .font-display {
+    font-weight: 500;
+  }
+
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--accent-moss);
     outline-offset: 2px;
   }
 
   ::selection {
-    background-color: #cfe0d8;
+    background-color: var(--accent-moss-tint-bg);
   }
 }
 
 @layer utilities {
-  /* Small caps label used for section headers and metric names. */
+  /* §5: mono uppercase section labels, dimmed so metadata stays subordinate. */
   .label-caps {
     font-family: var(--font-mono);
     font-size: 0.6875rem;
+    font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--color-muted);
+    /*
+     * Spec pins --text-label to #6f8079, but measured against --bg-panel-1 that is
+     * 4.12:1 — under the 4.5:1 AA floor the same spec requires. --text-secondary is the
+     * next step up inside the given palette and measures 6.61:1, so labels use it and
+     * stay subordinate to body text. No colour outside the sheet was introduced.
+     */
+    color: var(--text-secondary);
   }
 
-  /* Paper grain: a barely-there texture so large empty areas do not read as flat white. */
-  .paper-grain {
-    background-image: radial-gradient(circle at 1px 1px, rgb(25 23 18 / 0.035) 1px, transparent 0);
-    background-size: 22px 22px;
+  /* §4: status pill — tinted accent block, solid accent text, mono uppercase. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--radius-pill);
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
   }
 
   @keyframes rise {

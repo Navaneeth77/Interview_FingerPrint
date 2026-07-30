@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { OptionGroup } from '@/components/ui/OptionGroup';
 import { TextAreaField, TextField } from '@/components/ui/TextArea';
-import { ApiError, generateQuestions } from '@/lib/client-api';
+import { ApiError, extractDocument, generateQuestions } from '@/lib/client-api';
 import { SAMPLE_SCENARIOS } from '@/lib/samples';
 import { LIMITS } from '@/lib/schemas';
 import { saveSession, takePreset } from '@/lib/session-store';
@@ -81,25 +81,36 @@ export default function SetupPage() {
   const jdReady = jobDescription.trim().length >= MIN_JD;
   const canStart = resumeReady && jdReady && !pending;
 
+  /**
+   * PDF and text uploads are a convenience, never a dependency: extraction happens on the
+   * server and any failure falls back to the paste box with an explicit message.
+   */
   const readTextFile = (file: File, target: 'resume' | 'jd') => {
     const key = target === 'resume' ? 'resume' : 'jd';
 
-    if (file.size > 400_000) {
-      setFileError((current) => ({ ...current, [key]: 'That file is too large — keep it under 400 KB.' }));
+    if (file.size > LIMITS.uploadBytes) {
+      setFileError((current) => ({
+        ...current,
+        [key]: 'That file is too large — keep it under 8 MB.',
+      }));
       return;
     }
 
-    file
-      .text()
+    setFileError((current) => ({ ...current, [key]: 'Reading file…' }));
+
+    extractDocument(file)
       .then((text) => {
         if (target === 'resume') setResume(text.slice(0, LIMITS.resume));
         else setJobDescription(text.slice(0, LIMITS.jobDescription));
         setFileError((current) => ({ ...current, [key]: undefined }));
       })
-      .catch(() => {
+      .catch((caught: unknown) => {
         setFileError((current) => ({
           ...current,
-          [key]: 'Could not read that file. Paste the text instead.',
+          [key]:
+            caught instanceof ApiError
+              ? caught.message
+              : 'Could not read that file. Paste the text instead.',
         }));
       });
   };
@@ -225,7 +236,7 @@ export default function SetupPage() {
                 onChange={setResume}
                 maxLength={LIMITS.resume}
                 rows={14}
-                placeholder="Paste your resume text — experience, projects, metrics, skills."
+                placeholder="Paste your resume, or upload a PDF above."
                 hint={
                   resumeReady
                     ? 'Looks good.'
@@ -240,7 +251,7 @@ export default function SetupPage() {
                 onChange={setJobDescription}
                 maxLength={LIMITS.jobDescription}
                 rows={14}
-                placeholder="Paste the job posting — responsibilities and requirements."
+                placeholder="Paste the job posting, or upload a PDF above."
                 hint={
                   jdReady
                     ? 'Looks good.'

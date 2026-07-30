@@ -1,7 +1,9 @@
 /**
  * Shared domain types for the interview session.
- * These shapes are produced by Gemma 4 (validated server-side) and rendered by the UI,
- * so they are the contract between `src/lib/schemas.ts` and the screens.
+ *
+ * V2 treats the interview as a dataset: every answer contributes content, speech and
+ * visual evidence, and Gemma reasons across that evidence to produce the fingerprint.
+ * Every V2 field is optional on the client types so a stored V1 session still renders.
  */
 
 export const INTERVIEW_TYPES = [
@@ -17,6 +19,31 @@ export type InterviewType = (typeof INTERVIEW_TYPES)[number];
 export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
 
+/**
+ * Question category is what makes the cross-question pattern engine possible: without it
+ * the report can only average scores, instead of noticing that both weak answers happened
+ * to be decision-justification questions.
+ */
+export const QUESTION_CATEGORIES = [
+  'technical-implementation',
+  'technical-decision',
+  'system-design',
+  'behavioral',
+  'role-fit',
+  'motivation',
+] as const;
+
+export type QuestionCategory = (typeof QUESTION_CATEGORIES)[number];
+
+export const QUESTION_CATEGORY_LABELS: Record<QuestionCategory, string> = {
+  'technical-implementation': 'Implementation',
+  'technical-decision': 'Decision & trade-offs',
+  'system-design': 'System design',
+  behavioral: 'Behavioural',
+  'role-fit': 'Role fit',
+  motivation: 'Motivation',
+};
+
 export const INTERVIEW_TYPE_LABELS: Record<InterviewType, string> = {
   technical: 'Technical',
   behavioral: 'Behavioral',
@@ -31,7 +58,6 @@ export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   hard: 'Senior bar',
 };
 
-/** What the candidate tells us before the interview starts. */
 export interface CandidateProfile {
   name: string;
   role: string;
@@ -41,24 +67,39 @@ export interface CandidateProfile {
   difficulty: Difficulty;
 }
 
-/** One Gemma-generated question, with the rationale it was asked for. */
+/** Traceability: which line of the resume and of the JD produced this question. */
+export interface QuestionProvenance {
+  resumeEvidence: string;
+  jobDescriptionEvidence: string;
+}
+
 export interface Question {
   id: number;
   question: string;
-  /** Why an interviewer would ask this — surfaced in the UI as "why this question". */
   reason: string;
   difficulty: Difficulty;
-  /** Short topic label, e.g. "Distributed systems". */
   focusArea: string;
-  /** Which input the question was grounded in. */
   groundedIn: 'resume' | 'job-description' | 'both';
+  category?: QuestionCategory;
+  provenance?: QuestionProvenance;
 }
 
 export type Verdict = 'strong' | 'solid' | 'developing' | 'weak';
 
-/** Gemma's evaluation of a single answer. */
+/** KSA for technical questions, STAR for behavioural — Gemma picks, or neither. */
+export interface FrameworkComponent {
+  name: string;
+  present: boolean;
+  note: string;
+}
+
+export interface FrameworkAssessment {
+  framework: 'KSA' | 'STAR' | 'none';
+  components: FrameworkComponent[];
+  coaching: string;
+}
+
 export interface Evaluation {
-  /** All three are scored 0–10. */
   relevance: number;
   clarity: number;
   depth: number;
@@ -66,11 +107,18 @@ export interface Evaluation {
   feedback: string;
   strengths: string[];
   improvements: string[];
-  /** The follow-up a real interviewer would have asked next. */
   followUp: string;
+  /** V2: whether a single probing follow-up is actually worth asking. */
+  followUpWorthAsking?: boolean;
+  framework?: FrameworkAssessment;
+  /** V2 sub-scores, 0-10, feeding the hierarchical assessment. */
+  reasoning?: number;
+  evidenceUse?: number;
+  structure?: number;
+  directness?: number;
+  conciseness?: number;
 }
 
-/** Client-side speech signals from the optional voice answer mode. */
 export interface SpeechMetrics {
   durationSec: number;
   wordCount: number;
@@ -78,23 +126,20 @@ export interface SpeechMetrics {
   fillerCount: number;
   topFillers: { word: string; count: number }[];
   longPauseCount: number;
+  longestPauseSec?: number;
+  /** Self-corrections/restarts, only counted where the pattern is unambiguous. */
+  restarts?: number;
 }
 
-/**
- * Client-side webcam signals from the optional camera mode.
- *
- * These are frame-difference measurements, not face or emotion recognition. They describe
- * what the camera saw — nothing here is a claim about confidence or competence.
- */
+export type MovementLevel = 'low' | 'moderate' | 'high';
+
 export interface VisualMetrics {
-  /** How many frames were sampled while answering. */
   samples: number;
-  /** Share of samples where the camera was delivering a real (non-blank) image. */
   cameraOnPct: number;
   /** 0–100 index of frame-to-frame movement. Higher = more restless. */
   movementIndex: number;
-  /** Share of samples where the movement sat in the centre of frame — a framing signal. */
   framingCenteredPct: number;
+  level?: MovementLevel;
 }
 
 export interface AnswerRecord {
@@ -102,18 +147,19 @@ export interface AnswerRecord {
   question: string;
   answer: string;
   mode: 'typed' | 'voice';
-  /** Seconds spent on this question. */
   durationSec: number;
   speech?: SpeechMetrics;
   visual?: VisualMetrics;
   evaluation?: Evaluation;
-  /** Set when Gemma failed to score this answer; the report still renders. */
   evaluationError?: string;
+  category?: QuestionCategory;
+  /** V2 adaptive probe: the one follow-up asked, and what the candidate said back. */
+  followUpQuestion?: string;
+  followUpAnswer?: string;
 }
 
 export interface FingerprintDimension {
   name: string;
-  /** 0–100. */
   score: number;
   note: string;
 }
@@ -131,24 +177,90 @@ export interface NextSession {
   drills: string[];
 }
 
-/** The final coaching report — the "Interview Fingerprint". */
+// --- V2 report structures --------------------------------------------------------
+
+/** One measured sub-dimension inside Content / Communication / Delivery. */
+export interface AssessmentDimension {
+  name: string;
+  score: number;
+  note: string;
+}
+
+export interface AssessmentGroup {
+  name: string;
+  score: number;
+  summary: string;
+  dimensions: AssessmentDimension[];
+}
+
+/** A relationship that repeats across questions — the core V2 differentiator. */
+export interface ObservedPattern {
+  title: string;
+  observation: string;
+  /** Question ids the conclusion is drawn from, so every claim stays traceable. */
+  evidenceQuestionIds: number[];
+  type: 'strength' | 'development';
+}
+
+export interface TimelineEntry {
+  questionId: number;
+  verdict: Verdict;
+  contentNote: string;
+  deliveryNote?: string;
+  movementLevel?: MovementLevel;
+}
+
+export interface PracticePriority {
+  what: string;
+  evidence: string;
+  whyItMatters: string;
+  howToPractice: string;
+}
+
+export interface PracticePlanItem {
+  problem: string;
+  evidence: string;
+  drill: string;
+}
+
+export interface EtiquettePoint {
+  rule: string;
+  why: string;
+}
+
+/** A concrete exercise generated from this candidate's actual weakness. */
+export interface TrainingDrill {
+  weakness: string;
+  framework: string;
+  practiceQuestion: string;
+  answerOutline: string[];
+}
+
 export interface InterviewReport {
   overallScore: number;
   headline: string;
   fingerprint: {
-    /** A short archetype label, e.g. "Hands-on builder, light on trade-offs". */
     label: string;
     summary: string;
     dimensions: FingerprintDimension[];
   };
   strengths: string[];
   weaknesses: string[];
-  repeatedPatterns: string[];
-  improvementAreas: ImprovementArea[];
   nextSession: NextSession;
+  /** V1 fields kept so older stored sessions still render. */
+  repeatedPatterns?: string[];
+  improvementAreas?: ImprovementArea[];
+  /** V2 additions. */
+  sessionSummary?: string;
+  practicePriority?: PracticePriority;
+  assessment?: AssessmentGroup[];
+  patterns?: ObservedPattern[];
+  timeline?: TimelineEntry[];
+  etiquette?: EtiquettePoint[];
+  practicePlan?: PracticePlanItem[];
+  trainingDrill?: TrainingDrill;
 }
 
-/** The whole session, kept in the browser (sessionStorage) for V1 — no database. */
 export interface InterviewSession {
   version: 1;
   createdAt: number;
@@ -156,6 +268,12 @@ export interface InterviewSession {
   questions: Question[];
   answers: AnswerRecord[];
   report?: InterviewReport;
-  /** Model id that generated this session, shown in the UI for transparency. */
   model?: string;
+}
+
+/** Shared thresholds so the UI and the prompts describe movement identically. */
+export function movementLevel(index: number): MovementLevel {
+  if (index >= 55) return 'high';
+  if (index >= 25) return 'moderate';
+  return 'low';
 }

@@ -47,6 +47,7 @@ export const RATE_LIMITS = {
   evaluate: { limit: 60, windowMs: FIFTEEN_MINUTES },
   report: { limit: 10, windowMs: FIFTEEN_MINUTES },
   health: { limit: 20, windowMs: FIFTEEN_MINUTES },
+  extract: { limit: 30, windowMs: FIFTEEN_MINUTES },
 } as const satisfies Record<string, RateLimitRule>;
 
 export function rateLimit(key: string, rule: RateLimitRule): RateLimitResult {

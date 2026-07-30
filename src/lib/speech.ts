@@ -44,10 +44,24 @@ export function countWords(text: string): number {
   return trimmed ? trimmed.split(/\s+/).length : 0;
 }
 
+/**
+ * Immediate word repetitions ("the the", "I I") are the only self-correction pattern that
+ * can be counted without guessing, so that is the only one counted.
+ */
+function countRestarts(transcript: string): number {
+  const words = transcript.toLowerCase().match(/\b[\w']+\b/g) ?? [];
+  let restarts = 0;
+  for (let i = 1; i < words.length; i += 1) {
+    if (words[i] === words[i - 1] && words[i].length > 1) restarts += 1;
+  }
+  return restarts;
+}
+
 export function computeSpeechMetrics(
   transcript: string,
   durationSec: number,
   longPauseCount: number,
+  longestPauseSec = 0,
 ): SpeechMetrics {
   const normalised = transcript.toLowerCase();
   const wordCount = countWords(transcript);
@@ -68,6 +82,8 @@ export function computeSpeechMetrics(
     fillerCount: counts.reduce((total, entry) => total + entry.count, 0),
     topFillers: counts.slice(0, 3),
     longPauseCount,
+    longestPauseSec: Math.round(longestPauseSec * 10) / 10,
+    restarts: countRestarts(transcript),
   };
 }
 

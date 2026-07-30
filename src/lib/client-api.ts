@@ -98,12 +98,42 @@ export function evaluateAnswer(
         interviewType: args.profile.interviewType,
         difficulty: args.profile.difficulty,
         focusArea: args.question.focusArea,
+        category: args.question.category,
         jobDescription: args.profile.jobDescription,
         speech: args.answer.speech,
+        followUpQuestion: args.answer.followUpQuestion,
+        followUpAnswer: args.answer.followUpAnswer,
       },
     },
     signal,
   );
+}
+
+/** Uploads a PDF or text file and returns its extracted text. */
+export async function extractDocument(file: File, signal?: AbortSignal): Promise<string> {
+  const body = new FormData();
+  body.append('file', file);
+
+  let response: Response;
+  try {
+    response = await fetch('/api/extract', { method: 'POST', body, signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    throw new ApiError('Could not upload that file. Paste the text instead.', 'network', true);
+  }
+
+  const payload: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const apiBody = payload as ApiErrorBody | null;
+    throw new ApiError(
+      apiBody?.error?.message ?? 'Could not read that file. Paste the text instead.',
+      apiBody?.error?.code ?? 'server_error',
+      false,
+    );
+  }
+
+  return (payload as { text: string }).text;
 }
 
 export function requestReport(
@@ -127,9 +157,12 @@ export function requestReport(
         answer: answer.answer,
         mode: answer.mode,
         durationSec: answer.durationSec,
+        category: answer.category,
         speech: answer.speech,
         visual: answer.visual,
         evaluation: answer.evaluation,
+        followUpQuestion: answer.followUpQuestion,
+        followUpAnswer: answer.followUpAnswer,
       })),
     },
     signal,

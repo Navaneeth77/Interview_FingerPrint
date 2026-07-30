@@ -214,6 +214,15 @@ async function callGemma(
  * transient failures (timeout, 5xx, malformed output). Anything still broken after the
  * retry surfaces as a `GemmaError` — we never silently swap in another model or fake data.
  */
+/** Bounded exponential backoff with jitter. Attempt 0 is immediate. */
+const MAX_ATTEMPTS = 3;
+const BASE_BACKOFF_MS = 600;
+
+function backoffDelay(attempt: number): number {
+  const exponential = BASE_BACKOFF_MS * 2 ** attempt;
+  return exponential + Math.random() * 250;
+}
+
 export async function generateJson<T>(options: GenerateJsonOptions<T>): Promise<GemmaResult<T>> {
   const {
     prompt,
@@ -228,7 +237,7 @@ export async function generateJson<T>(options: GenerateJsonOptions<T>): Promise<
   const started = Date.now();
   let lastError: GemmaError | null = null;
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     try {
       const payload = await callGemma(prompt, schema, temperature, maxOutputTokens, timeoutMs);
 
@@ -269,7 +278,14 @@ export async function generateJson<T>(options: GenerateJsonOptions<T>): Promise<
         );
       }
 
-      return { data: validated, model: GEMMA_MODEL, latencyMs: Date.now() - started };
+      const latencyMs = Date.now() - started;
+      console.log(
+        `[gemma] ${label} ok model=${GEMMA_MODEL} attempt=${attempt + 1} latency=${latencyMs}ms ` +
+          `promptTokens=${payload.usageMetadata?.promptTokenCount ?? '?'} ` +
+          `outputTokens=${payload.usageMetadata?.candidatesTokenCount ?? '?'}`,
+      );
+
+      return { data: validated, model: GEMMA_MODEL, latencyMs };
     } catch (error) {
       const gemmaError =
         error instanceof GemmaError
@@ -280,11 +296,22 @@ export async function generateJson<T>(options: GenerateJsonOptions<T>): Promise<
             );
 
       lastError = gemmaError;
-      if (!gemmaError.retryable || attempt === 1) break;
-      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      // Logs carry the failure class and never the key or the candidate's text.
+      console.warn(
+        `[gemma] ${label} attempt=${attempt + 1}/${MAX_ATTEMPTS} code=${gemmaError.code} ` +
+          `retryable=${gemmaError.retryable} model=${GEMMA_MODEL}: ${gemmaError.message}`,
+      );
+
+      // Permanent failures (bad key, bad model id, safety block) never get a second try.
+      if (!gemmaError.retryable || attempt === MAX_ATTEMPTS - 1) break;
+      await new Promise((resolve) => setTimeout(resolve, backoffDelay(attempt)));
     }
   }
 
+  console.error(
+    `[gemma] ${label} failed after ${MAX_ATTEMPTS} attempts code=${lastError?.code ?? 'unknown'}`,
+  );
   throw lastError ?? new GemmaError('upstream_error', `Gemma failed during ${label}.`);
 }
 

@@ -2,6 +2,8 @@
 
 **AI mock interviews that end in a personalised coaching report — powered by Gemma 4.**
 
+> We don't just score your interview. We discover *how* you interview.
+
 Built for the Gemma 4 Hackathon Sprint / Build with Gemma, GDG VIT Chennai.
 
 ---
@@ -103,7 +105,8 @@ final wait is one report call instead of six sequential ones.
 |---|---|---|
 | `POST /api/interview/generate` | resume, job description, interview type, difficulty | 5 questions, each with a rationale, focus area, difficulty, and which input it was grounded in |
 | `POST /api/interview/evaluate` | one question + answer + context | relevance / clarity / depth (0–10), verdict, feedback, strengths, improvements, the follow-up question |
-| `POST /api/interview/report` | the whole session | overall score, fingerprint label + summary + 5 dimensions, strengths, weaknesses, repeated patterns, improvement plan, next session |
+| `POST /api/interview/report` | the whole session | two parallel calls: one scores (fingerprint, Content/Communication/Delivery, strengths, weaknesses), one coaches (patterns, timeline, #1 priority, plan, drill, etiquette, next session) |
+| `POST /api/extract` | a PDF or text upload | plain text, or a message telling you to paste instead |
 | `GET /api/health` | — | a live connectivity check used by the header badge |
 
 Every response is requested with the Gemini API's `responseSchema`, then validated with Zod
@@ -141,7 +144,20 @@ quality questions, so quality won.
 
 ## Features
 
-- Resume and job description input — paste, or upload a `.txt` / `.md` file
+- Resume and job description input — paste, or upload a **PDF** / `.txt` / `.md` file
+- **Voice-first interview room**: a large camera, the question beside it, and a record →
+  transcribe → finish flow. Typing stays available as a fallback and for accessibility
+- **Cross-question pattern engine** — every question is classified (implementation,
+  decision & trade-offs, system design, behavioural, role fit, motivation), so the report
+  can find *which kind* of question a candidate struggles with rather than averaging scores
+- **Hierarchical assessment** — Content, Communication and Delivery scored separately with
+  sub-dimensions, so a rough delivery never drags down a content score
+- **Evidence timeline** — the session read chronologically, with every pattern traced back
+  to the question ids it came from
+- **KSA / STAR** framework assessment per answer, chosen by question type
+- **One adaptive follow-up** per question, asked only when Gemma judges the answer left a
+  specific gap a single probe would close
+- **A generated 5-minute drill** built from the candidate's own resume material
 - Interview type: technical, behavioural, system design, HR screen, mixed
 - Difficulty: warm-up, standard, senior bar
 - Five Gemma-generated questions with visible rationale and grounding
@@ -251,6 +267,12 @@ Get a key at https://aistudio.google.com/apikey.
 
 Notes for deployment:
 
+- The report is deliberately **two Gemma calls in parallel** rather than one. A single call
+  had to emit the assessment and the entire coaching narrative, which pushed generation past
+  the 60s serverless ceiling whenever the model was under load (`503 high demand`). Two
+  smaller calls each finish well inside the budget at roughly the same wall-clock time.
+- Gemma requests use bounded exponential backoff (3 attempts) and classify errors: bad keys,
+  bad model ids and safety blocks are never retried; timeouts, 429s and 5xx are.
 - Route handlers declare `export const maxDuration = 60`. Question generation takes ~20–30s
   and the report ~20–25s, so the default 10s limit is not enough.
 - Nothing depends on the local filesystem, a background worker, or a long-running process.

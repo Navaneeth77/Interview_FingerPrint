@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       validate: zodValidator(evaluationResponseSchema),
       // Lower temperature than generation: scoring should be repeatable, not creative.
       temperature: 0.3,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 4096,
       timeoutMs: 40_000,
     });
 

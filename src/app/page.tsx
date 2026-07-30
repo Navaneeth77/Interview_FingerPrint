@@ -33,7 +33,7 @@ export default function LandingPage() {
             <br className="hidden sm:block" /> the wrong questions.
           </h1>
 
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-soft">
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-soft/90">
             Generic question banks cannot see your resume, and they cannot tell you why your
             answer fell flat. Interview Fingerprint reads your background against the job you
             actually want, runs the interview, and hands back a coaching report that names the one

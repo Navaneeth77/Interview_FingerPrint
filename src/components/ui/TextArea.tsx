@@ -44,8 +44,13 @@ export function TextAreaField({
         </label>
         {onFile ? (
           <label className="cursor-pointer font-mono text-[0.7rem] text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">
-            upload .txt
-            <input type="file" accept=".txt,.md,text/plain,text/markdown" className="sr-only" onChange={handleFile} />
+            upload pdf / txt
+            <input
+              type="file"
+              accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown"
+              className="sr-only"
+              onChange={handleFile}
+            />
           </label>
         ) : null}
       </div>
@@ -57,7 +62,7 @@ export function TextAreaField({
         maxLength={maxLength}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full resize-y rounded-xl border border-line bg-surface px-4 py-3.5 text-sm leading-relaxed text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none"
+        className="w-full resize-y rounded-[10px] border border-line bg-inset px-4 py-3.5 text-sm leading-relaxed text-ink placeholder:text-muted/70 focus:border-line-strong focus:outline-none"
       />
 
       <div className="mt-1.5 flex items-baseline justify-between gap-3">
@@ -102,7 +107,7 @@ export function TextField({
         maxLength={maxLength}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-xl border border-line bg-surface px-4 text-sm text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none"
+        className="h-11 w-full rounded-[10px] border border-line bg-inset px-4 text-sm text-ink placeholder:text-muted/70 focus:border-line-strong focus:outline-none"
       />
     </div>
   );
