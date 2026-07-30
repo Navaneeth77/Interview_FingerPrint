@@ -38,7 +38,7 @@ Resume + JD → Gemma → Personalised interview → Your answers → Gemma eval
 | | |
 |---|---|
 | **Live app** | _add your Vercel URL here after deploying_ |
-| **Repo** | https://github.com/Navaneeth77/GDG_Hackathon |
+| **Repo** | https://github.com/Navaneeth77/Interview_FingerPrint |
 
 **Demo flow (about 3 minutes):**
 
@@ -229,8 +229,8 @@ src/
 Requires Node.js 20+.
 
 ```bash
-git clone https://github.com/Navaneeth77/GDG_Hackathon.git
-cd GDG_Hackathon
+git clone https://github.com/Navaneeth77/Interview_FingerPrint.git
+cd Interview_FingerPrint
 npm install
 cp .env.example .env.local   # then add your key
 npm run dev
