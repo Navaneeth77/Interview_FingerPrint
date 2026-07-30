@@ -1,0 +1,87 @@
+@import 'tailwindcss';
+
+/*
+ * Design language: printed interview notes. Warm paper, ink type, one green accent,
+ * hairline rules instead of drop shadows. Deliberately light-only — the app is demoed
+ * on a projector, and a single committed palette beats a half-tuned dark mode.
+ */
+@theme {
+  --color-paper: #f6f4ef;
+  --color-surface: #fffefb;
+  --color-ink: #191712;
+  --color-ink-soft: #4b4740;
+  --color-muted: #78726a;
+  --color-line: #e3ded1;
+  --color-line-strong: #cec7b6;
+
+  --color-accent: #1f5f4b;
+  --color-accent-hover: #184c3c;
+  --color-accent-wash: #eef3f0;
+
+  --color-flag: #a8501e;
+  --color-flag-wash: #f9efe8;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-instrument-serif), Georgia, 'Times New Roman', serif;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    font-family: var(--font-sans);
+  }
+
+  /* Focus ring that matches the palette rather than the browser default blue. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: #cfe0d8;
+  }
+}
+
+@layer utilities {
+  /* Small caps label used for section headers and metric names. */
+  .label-caps {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* Paper grain: a barely-there texture so large empty areas do not read as flat white. */
+  .paper-grain {
+    background-image: radial-gradient(circle at 1px 1px, rgb(25 23 18 / 0.035) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .animate-rise {
+    animation: rise 0.35s ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-rise {
+      animation: none;
+    }
+  }
+}
