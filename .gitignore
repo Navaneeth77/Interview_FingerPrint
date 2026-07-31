@@ -34,8 +34,8 @@ yarn-error.log*
 .env*
 !.env.example
 
-# local tool settings (can capture command history containing secrets)
-.claude/settings.local.json
+# local editor/tool settings
+.claude/
 
 # vercel
 .vercel
